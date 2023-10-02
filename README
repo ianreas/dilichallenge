@@ -1,0 +1,8 @@
+For Windows:
+ - Run .\setup.bat for powershell
+ - Run setup.bat for Command Prompt
+
+ For Linux/MacOS:
+  - Run ./setup.sh
+
+
