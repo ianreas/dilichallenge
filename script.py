@@ -3,6 +3,8 @@ from pdfminer.layout import LTTextContainer
 import re
 import spacy
 
+
+#extracts text data from a given pdf page
 def extract_text_from_page(page_number):
     text = ""
     
@@ -11,111 +13,102 @@ def extract_text_from_page(page_number):
             for element in page_layout:
                 if isinstance(element, LTTextContainer):
                     text += element.get_text()
-            break  # stop processing once the desired page is found and processed
+            break  #stop processing once the desired page is found and processed
 
     return text
 
-
+#finds data in the text usinmg a given regex pattern
 def findMatchWithPattern(text, pattern):
     match = re.search(pattern, text, re.DOTALL)
 
     if match:
-        property_name = match.group(1).strip()  # Use strip() to remove any leading or trailing whitespace
+        property_name = match.group(1).strip()  #Use strip() to remove any leading or trailing whitespace
         return property_name
     else:
         print("Property name not found!")
 
 
+#extracts data from tables, since tables in pdf are read from top to bottom by pdfminer. 
+#we need to extract them by reading them from left to right across the columns.
 def extract_table_info(pdf_path, pattern, target_page):
     for page_num, page_layout in enumerate(extract_pages(pdf_path), start=1):
         if page_num != target_page:
             continue
         
-        # Store each text block with its x-coordinate and y-coordinate
+        #Store each text block with its x-coordinate and y-coordinate
         text_blocks = []
         for element in page_layout:
             if isinstance(element, LTTextContainer):
-                # Get the x-coordinate (x0) and y-coordinate (y0) of the text block
+                #Get the x-coordinate (x0) and y-coordinate (y0) of the text block
                 x0, y0 = element.bbox[0], element.bbox[1]
                 text = element.get_text().strip()
                 text_blocks.append(((x0, y0), text))
 
-        # Sort text blocks based on y-coordinate first (to identify rows) and then x-coordinate (for left-to-right order)
+        #Sort text blocks based on y-coordinate first (to identify rows) and then x-coordinate (for left-to-right order)
         sorted_blocks = sorted(text_blocks, key=lambda x: (-x[0][1], x[0][0]))
 
-        # Combine the sorted text
+        #Combine the sorted text
         full_text = ' '.join([text for _, text in sorted_blocks])
 
-        # Use regex to find the Total Units value
+        #Use regex to find the Total Units value
         match = re.search(pattern, full_text)
         if match:
             return match.group(1)
 
-#property name
 
-
-
-#print(findMatchWithPattern(extract_text_from_page(28), r'Knol Apartments\s+(\d+)\s+(\d+)\s+\$\d+,\d+\s+\$\d+\.\d+\s+(\d+)\s+([\d.]+%)'))
-
-lines = extract_text_from_page(28).split('\n')
-index = lines.index('Knol Apartments')
-occupancy_percentage = lines[index + 7]  # 7 lines down from 'Knol Apartments'
-
-#print(occupancy_percentage)
-
-#print(extract_text_from_page(28))
-
-
+#extract occupancy since that table can be of a different size depending on the offering memorandum
 def extract_table_info_data_occupancy(pdf_path, target_page):
     for page_num, page_layout in enumerate(extract_pages(pdf_path), start=1):
         if page_num != target_page:
             continue
         
-        # Store each text block with its x-coordinate and y-coordinate
+        #Store each text block with its x-coordinate and y-coordinate
         text_blocks = []
         for element in page_layout:
             if isinstance(element, LTTextContainer):
-                # Get the x-coordinate (x0) and y-coordinate (y0) of the text block
+                #Get the x-coordinate (x0) and y-coordinate (y0) of the text block
                 x0, y0 = element.bbox[0], element.bbox[1]
                 text = element.get_text().strip()
                 text_blocks.append(((x0, y0), text))
 
-        # Sort text blocks based on y-coordinate first (to identify rows) and then x-coordinate (for left-to-right order)
+        #Sort text blocks based on y-coordinate first (to identify rows) and then x-coordinate (for left-to-right order)
         sorted_blocks = sorted(text_blocks, key=lambda x: (-x[0][1], x[0][0]))
 
-        # Combine the sorted text
+        #Combine the sorted text
         full_text = ' '.join([text for _, text in sorted_blocks])
         
-        # Split the string by spaces
+        #Split the string by spaces
         parts = full_text.split()
 
-        # Find the index of 'Knol Apartments' in the split parts
+        #Find the index of 'Knol Apartments' in the split parts
         index = parts.index('Knol')
-        # Access the 6th string after 'Knol Apartments'
+        #Access the 6th string after 'Knol Apartments'
         if index != -1 and len(parts) > index + 7: # To ensure there's no index error
             occupancy_percentage = parts[index + 7]
             return occupancy_percentage
         else:
             print("Knol Apartments not found or data not complete.")
 
+
+#extracts zip code
 def extract_table_info_zip(pdf_path, target_page):
     for page_num, page_layout in enumerate(extract_pages(pdf_path), start=1):
         if page_num != target_page:
             continue
         
-        # Store each text block with its x-coordinate and y-coordinate
+        #Store each text block with its x-coordinate and y-coordinate
         text_blocks = []
         for element in page_layout:
             if isinstance(element, LTTextContainer):
-                # Get the x-coordinate (x0) and y-coordinate (y0) of the text block
+                #Get the x-coordinate (x0) and y-coordinate (y0) of the text block
                 x0, y0 = element.bbox[0], element.bbox[1]
                 text = element.get_text().strip()
                 text_blocks.append(((x0, y0), text))
 
-        # Sort text blocks based on y-coordinate first (to identify rows) and then x-coordinate (for left-to-right order)
+        #Sort text blocks based on y-coordinate first (to identify rows) and then x-coordinate (for left-to-right order)
         sorted_blocks = sorted(text_blocks, key=lambda x: (-x[0][1], x[0][0]))
 
-        # Combine the sorted text
+        #Combine the sorted text
         full_text = ' '.join([text for _, text in sorted_blocks])
 
         match = re.search(r'\b[A-Z]{2}\s(\d{5})\b', full_text)
@@ -126,18 +119,13 @@ def extract_table_info_zip(pdf_path, target_page):
             print("ZIP code not found.")
 
 
-#print(extract_text_from_page(37))
-
-
+print("--------------------------------------------------------------------------")
 print("Property Name: " + findMatchWithPattern(extract_text_from_page(1), r'FOR THE ACQUISITION OF:\s*([^|]+)'))
 print("Purchase Price: " + findMatchWithPattern(extract_text_from_page(10), r'Purchase Price / Acquisition Cost[^\$]*([\$\d,]+)'))
 print("Number of Units: " + extract_table_info('Offering-Memorandum-The-Knol-Apartments.pdf', r"Total Units\s*(\d+)", 10))
 print("Total Rentable Sq. Feet: " + extract_table_info('Offering-Memorandum-The-Knol-Apartments.pdf',r"Total\s*Rentable\s*Square\s*Feet\s*([\d,]+)\s*SF", 10))
 print("Average Unit Sq. Feet: " + extract_table_info('Offering-Memorandum-The-Knol-Apartments.pdf', r"Average Square Feet/Unit\s*(\d+)", 10))
-
-
-
-    
+  
 print("Price Per Unit: " + findMatchWithPattern(extract_text_from_page(17), r"\$/Unit\s*(\$\d{1,3}(?:,\d{3})*)"))
 
 print("Average Monthly Rent: $" + findMatchWithPattern(extract_text_from_page(17), r"Total/Average\s*(?:\d+[,.]?\d*\s*){3}(\d{1,3}(?:,\d{3})*)"))
@@ -147,22 +135,16 @@ print("Average Rent / Sq. Ft: $" + findMatchWithPattern(extract_text_from_page(1
 print("Occupancy Rate: " + extract_table_info_data_occupancy('Offering-Memorandum-The-Knol-Apartments.pdf', 28))
 
 
-
+#load an nlp model
 nlp = spacy.load("en_core_web_sm") #python -m spacy download en_core_web_sm
 
+#find the page with the sponsor information
 doc = nlp(extract_text_from_page(37))
 
-#Extract and print named entities, labels, and their positions in the text
+
+#extract and print named entities, labels, and their positions in the text
+#in this case extracts the first text with a label ORG
 print("Sponsor: " + doc.ents[0].text)
-
-#print("Average Unit Sq. Feet: " + extract_table_info('Offering-Memorandum-The-Knol-Apartments.pdf', r"Property Address\s*(\d+)", 10))
-
-
-
-
-
-
-    
 
 
 print("Zip code: " + extract_table_info_zip("Offering-Memorandum-The-Knol-Apartments.pdf", 10))

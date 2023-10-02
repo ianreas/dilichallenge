@@ -1,4 +1,16 @@
 @echo off
-pip3 install -r requirements.txt
-python3 -m spacy download en_core_web_sm
+
+REM Create a virtual environment named "env"
+python -m venv env
+
+REM Activate the virtual environment
+call env\Scripts\activate
+
+REM Install required packages
+pip install -r requirements.txt
+
+REM Download the spaCy model
+python -m spacy download en_core_web_sm
+
+REM Run the main script
 python script.py
